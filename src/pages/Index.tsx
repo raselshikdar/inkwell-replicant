@@ -1,12 +1,14 @@
 import HeaderNav from "@/components/HeaderNav";
 import ArticleFeed from "@/components/ArticleFeed";
+import PopularHeader from "@/components/PopularHeader";
 import RightSidebar from "@/components/RightSidebar";
 
 const Index = () => {
   return (
-    <div className="min-h-screen bg-hn-bg">
+    <div className="min-h-screen bg-background">
       <HeaderNav />
-      <main className="max-w-[1200px] mx-auto px-4 py-6">
+      <main className="max-w-[1200px] mx-auto px-4 py-5">
+        <PopularHeader />
         <div className="flex gap-6">
           {/* Main feed */}
           <div className="flex-1 min-w-0">
