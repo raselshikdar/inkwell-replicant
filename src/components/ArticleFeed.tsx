@@ -3,6 +3,10 @@ import ArticleCard from "@/components/ArticleCard";
 import WritePrompt from "@/components/WritePrompt";
 import DiscussionPost from "@/components/DiscussionPost";
 import ForumSection from "@/components/ForumSection";
+import BottomDiscussionPost from "@/components/BottomDiscussionPost";
+import AuthorsWorthFollowing from "@/components/AuthorsWorthFollowing";
+import TrendingTagsWeek from "@/components/TrendingTagsWeek";
+import TrendingSeriesSection from "@/components/TrendingSeriesSection";
 
 const ArticleFeed = () => {
   const featuredArticle = mockArticles[0];
@@ -34,6 +38,18 @@ const ArticleFeed = () => {
 
       {/* Forum section */}
       <ForumSection />
+
+      {/* Bottom discussion post (Saikat Das) */}
+      <BottomDiscussionPost />
+
+      {/* Authors worth following */}
+      <AuthorsWorthFollowing />
+
+      {/* Trending tags this week */}
+      <TrendingTagsWeek />
+
+      {/* Trending series */}
+      <TrendingSeriesSection />
     </div>
   );
 };
