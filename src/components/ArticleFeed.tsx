@@ -1,4 +1,5 @@
 import { mockArticles, mockDiscussionPosts } from "@/data/mockData";
+import { mockExtendedDiscussions } from "@/data/extendedDiscussions";
 import ArticleCard from "@/components/ArticleCard";
 import WritePrompt from "@/components/WritePrompt";
 import DiscussionPost from "@/components/DiscussionPost";
@@ -7,6 +8,7 @@ import BottomDiscussionPost from "@/components/BottomDiscussionPost";
 import AuthorsWorthFollowing from "@/components/AuthorsWorthFollowing";
 import TrendingTagsWeek from "@/components/TrendingTagsWeek";
 import TrendingSeriesSection from "@/components/TrendingSeriesSection";
+import { ArrowDown } from "lucide-react";
 
 const ArticleFeed = () => {
   const featuredArticle = mockArticles[0];
@@ -50,6 +52,20 @@ const ArticleFeed = () => {
 
       {/* Trending series */}
       <TrendingSeriesSection />
+
+      {/* Extended discussion posts */}
+      <div className="mt-2 border-t border-border">
+        {mockExtendedDiscussions.map((post) => (
+          <DiscussionPost key={post.id} post={post} />
+        ))}
+      </div>
+
+      {/* Load more */}
+      <div className="flex justify-center py-6 border-t border-border">
+        <button className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+          Load more <ArrowDown className="h-4 w-4" />
+        </button>
+      </div>
     </div>
   );
 };
