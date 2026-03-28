@@ -1,9 +1,15 @@
 import { Search, Link2, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useState } from "react";
+import SidebarDrawer from "@/components/SidebarDrawer";
 
 const HeaderNav = () => {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   return (
+    <>
+      <SidebarDrawer open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
     <header className="sticky top-0 z-50 bg-card border-b border-border">
       <div className="max-w-[1400px] mx-auto px-4 flex items-center justify-between h-14">
         {/* Left: Hamburger + Logo */}
