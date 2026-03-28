@@ -14,7 +14,7 @@ const HeaderNav = () => {
       <div className="max-w-[1400px] mx-auto px-4 flex items-center justify-between h-14">
         {/* Left: Hamburger + Logo */}
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" className="text-foreground hover:bg-muted h-9 w-9">
+          <Button variant="ghost" size="icon" className="text-foreground hover:bg-muted h-9 w-9" onClick={() => setSidebarOpen(true)}>
             <Menu className="h-5 w-5" />
           </Button>
           <a href="/" className="flex items-center gap-2">
