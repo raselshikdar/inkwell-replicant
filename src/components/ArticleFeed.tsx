@@ -1,32 +1,33 @@
-import { mockArticles } from "@/data/mockData";
+import { mockArticles, mockDiscussionPosts } from "@/data/mockData";
 import ArticleCard from "@/components/ArticleCard";
+import WritePrompt from "@/components/WritePrompt";
+import DiscussionPost from "@/components/DiscussionPost";
+import ForumSection from "@/components/ForumSection";
 
 const ArticleFeed = () => {
-  const featured = mockArticles[0];
-  const gridArticles = mockArticles.slice(1);
-
   return (
     <div>
-      {/* Section header */}
-      <div className="flex items-center gap-3 mb-5">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-primary" />
-          <span className="text-xs font-bold text-muted-foreground tracking-wider uppercase">New & Popular</span>
-        </div>
-        <div className="flex-1 h-px bg-border" />
-      </div>
-
-      {/* Featured card */}
-      <div className="mb-5">
-        <ArticleCard article={featured} variant="featured" />
-      </div>
-
-      {/* 2-column grid */}
+      {/* Popular posts — 2x2 grid (4 cards) */}
       <div className="grid grid-cols-2 gap-4">
-        {gridArticles.map((article) => (
+        {mockArticles.slice(0, 4).map((article) => (
           <ArticleCard key={article.id} article={article} variant="grid" />
         ))}
       </div>
+
+      {/* Write prompt */}
+      <div className="mt-5">
+        <WritePrompt />
+      </div>
+
+      {/* Discussion posts */}
+      <div className="mt-2">
+        {mockDiscussionPosts.map((post) => (
+          <DiscussionPost key={post.id} post={post} />
+        ))}
+      </div>
+
+      {/* Forum section */}
+      <ForumSection />
     </div>
   );
 };
