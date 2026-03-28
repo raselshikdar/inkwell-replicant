@@ -95,7 +95,7 @@ const SidebarDrawer = ({ open, onClose }: SidebarDrawerProps) => {
           {/* User */}
           <div className="flex items-center gap-3 px-3 py-2.5 border-t border-border pt-4">
             <Avatar className="h-8 w-8">
-              <AvatarFallback className="bg-amber-500 text-white text-xs font-semibold">
+              <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
                 RS
               </AvatarFallback>
             </Avatar>
