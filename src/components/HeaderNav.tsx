@@ -39,6 +39,7 @@ const HeaderNav = () => {
         </div>
       </div>
     </header>
+    </>
   );
 };
 
