@@ -7,8 +7,15 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       <HeaderNav />
-      <main className="max-w-[1200px] mx-auto px-4 py-5">
+      <main className="max-w-[1200px] mx-auto px-4 py-4">
         <PopularHeader />
+
+        {/* NEW & POPULAR label */}
+        <div className="flex items-center gap-2 mb-3">
+          <span className="w-2 h-2 rounded-full bg-primary" />
+          <span className="text-xs font-semibold text-foreground tracking-wide uppercase">New & Popular</span>
+        </div>
+
         <div className="flex gap-6">
           {/* Main feed */}
           <div className="flex-1 min-w-0">
