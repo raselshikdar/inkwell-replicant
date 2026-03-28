@@ -1,14 +1,20 @@
 import { Search, Link2, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useState } from "react";
+import SidebarDrawer from "@/components/SidebarDrawer";
 
 const HeaderNav = () => {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   return (
+    <>
+      <SidebarDrawer open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
     <header className="sticky top-0 z-50 bg-card border-b border-border">
       <div className="max-w-[1400px] mx-auto px-4 flex items-center justify-between h-14">
         {/* Left: Hamburger + Logo */}
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" className="text-foreground hover:bg-muted h-9 w-9">
+          <Button variant="ghost" size="icon" className="text-foreground hover:bg-muted h-9 w-9" onClick={() => setSidebarOpen(true)}>
             <Menu className="h-5 w-5" />
           </Button>
           <a href="/" className="flex items-center gap-2">
@@ -33,6 +39,7 @@ const HeaderNav = () => {
         </div>
       </div>
     </header>
+    </>
   );
 };
 
