@@ -53,7 +53,7 @@ const TagPage = () => {
           <div className="grid grid-cols-2 gap-3">
             {articles.map((article) => (
               <Link key={article.id} to={`/article/${article.slug}`}>
-                <ArticleCard article={article} variant="grid" />
+                <ArticleCard article={{...article, coverImage: article.coverImage || ""}} variant="grid" />
               </Link>
             ))}
           </div>
