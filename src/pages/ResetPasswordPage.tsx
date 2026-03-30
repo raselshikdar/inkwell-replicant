@@ -1,36 +1,54 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/contexts/AuthContext";
-import { Eye, EyeOff } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Eye, EyeOff } from "lucide-react";
 
-const SignupPage = () => {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+const ResetPasswordPage = () => {
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
-  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const { signup } = useAuth();
+  const [error, setError] = useState("");
+  const [ready, setReady] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Check for recovery token in URL hash
+    const hash = window.location.hash;
+    if (hash.includes("type=recovery")) {
+      setReady(true);
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-    if (!name || !email || !password) { setError("Please fill in all fields"); return; }
     if (password.length < 8) { setError("Password must be at least 8 characters"); return; }
     setLoading(true);
+    setError("");
     try {
-      await signup(name, email, password);
-      toast.success("Account created! Check your email to verify.");
-      navigate("/");
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) throw error;
+      toast.success("Password updated successfully!");
+      navigate("/login");
     } catch (err: any) {
-      setError(err?.message || "Signup failed");
+      setError(err?.message || "Failed to update password");
     } finally {
       setLoading(false);
     }
   };
+
+  if (!ready) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <div className="text-center">
+          <h1 className="text-xl font-bold text-foreground mb-2">Invalid reset link</h1>
+          <p className="text-sm text-muted-foreground mb-4">This link is invalid or has expired.</p>
+          <Link to="/forgot-password" className="text-primary font-medium hover:underline">Request a new link →</Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
@@ -43,26 +61,13 @@ const SignupPage = () => {
             <span className="text-foreground font-bold text-xl">hashnode</span>
           </Link>
         </div>
-
         <div className="bg-card border border-border rounded-xl p-6">
-          <h1 className="text-xl font-bold text-foreground mb-1">Create your account</h1>
-          <p className="text-sm text-muted-foreground mb-6">Join the developer community</p>
-
+          <h1 className="text-xl font-bold text-foreground mb-1">Set new password</h1>
+          <p className="text-sm text-muted-foreground mb-6">Enter your new password below.</p>
           {error && <div className="bg-destructive/10 text-destructive text-sm rounded-lg px-3 py-2 mb-4">{error}</div>}
-
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="text-sm font-medium text-foreground mb-1.5 block">Full Name</label>
-              <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="John Doe"
-                className="w-full bg-secondary border border-border rounded-lg px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20" />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-foreground mb-1.5 block">Email</label>
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com"
-                className="w-full bg-secondary border border-border rounded-lg px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20" />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-foreground mb-1.5 block">Password</label>
+              <label className="text-sm font-medium text-foreground mb-1.5 block">New Password</label>
               <div className="relative">
                 <input type={showPw ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Min. 8 characters"
                   className="w-full bg-secondary border border-border rounded-lg px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 pr-10" />
@@ -72,18 +77,13 @@ const SignupPage = () => {
               </div>
             </div>
             <Button type="submit" className="w-full rounded-lg" disabled={loading}>
-              {loading ? "Creating account..." : "Create account"}
+              {loading ? "Updating..." : "Update password"}
             </Button>
           </form>
-
-          <p className="text-sm text-muted-foreground text-center mt-6">
-            Already have an account?{" "}
-            <Link to="/login" className="text-primary font-medium hover:underline">Sign in</Link>
-          </p>
         </div>
       </div>
     </div>
   );
 };
 
-export default SignupPage;
+export default ResetPasswordPage;
