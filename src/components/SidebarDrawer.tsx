@@ -1,7 +1,8 @@
-import { Home, FolderOpen, Bookmark, MessageCircle, Keyboard, Sun, LifeBuoy, ChevronsRight, PenSquare, Settings, LogIn, LogOut } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Home, FolderOpen, Bookmark, MessageCircle, Keyboard, Sun, Moon, LifeBuoy, ChevronsRight, PenSquare, Settings, LogIn, LogOut } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTheme } from "@/contexts/ThemeContext";
 
 interface SidebarDrawerProps {
   open: boolean;
@@ -9,7 +10,12 @@ interface SidebarDrawerProps {
 }
 
 const SidebarDrawer = ({ open, onClose }: SidebarDrawerProps) => {
-  const { user, isAuthenticated, logout } = useAuth();
+  const { profile, isAuthenticated, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
+
+  const initials = profile?.name
+    ? profile.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
+    : "U";
 
   const navItems = [
     { icon: Home, label: "Home", href: "/" },
@@ -60,23 +66,33 @@ const SidebarDrawer = ({ open, onClose }: SidebarDrawerProps) => {
                 </Link>
               </li>
             )}
-            {[{ icon: Keyboard, label: "Shortcuts" }, { icon: Sun, label: "Theme" }, { icon: LifeBuoy, label: "Resources" }].map((item) => (
-              <li key={item.label}>
-                <button className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[15px] font-medium text-foreground hover:bg-secondary w-full transition-colors">
-                  <item.icon className="h-5 w-5" /><span>{item.label}</span>
-                </button>
-              </li>
-            ))}
+            <li>
+              <button className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[15px] font-medium text-foreground hover:bg-secondary w-full transition-colors">
+                <Keyboard className="h-5 w-5" /><span>Shortcuts</span>
+              </button>
+            </li>
+            <li>
+              <button onClick={toggleTheme} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[15px] font-medium text-foreground hover:bg-secondary w-full transition-colors">
+                {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+                <span>{theme === "light" ? "Dark mode" : "Light mode"}</span>
+              </button>
+            </li>
+            <li>
+              <button className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[15px] font-medium text-foreground hover:bg-secondary w-full transition-colors">
+                <LifeBuoy className="h-5 w-5" /><span>Resources</span>
+              </button>
+            </li>
           </ul>
 
           <div className="flex items-center gap-3 px-3 py-2.5 border-t border-border pt-4">
             {isAuthenticated ? (
               <>
-                <Link to={`/user/${user?.username}`} onClick={onClose} className="flex items-center gap-3 flex-1">
+                <Link to={`/user/${profile?.username}`} onClick={onClose} className="flex items-center gap-3 flex-1">
                   <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">{user?.initials}</AvatarFallback>
+                    {profile?.avatar_url && <AvatarImage src={profile.avatar_url} />}
+                    <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">{initials}</AvatarFallback>
                   </Avatar>
-                  <span className="text-[15px] font-medium text-foreground">{user?.name}</span>
+                  <span className="text-[15px] font-medium text-foreground">{profile?.name}</span>
                 </Link>
                 <button onClick={() => { logout(); onClose(); }} className="text-muted-foreground hover:text-foreground">
                   <LogOut className="h-4 w-4" />

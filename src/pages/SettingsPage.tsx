@@ -2,18 +2,23 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import HeaderNav from "@/components/HeaderNav";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
 import { Settings, User, Bell, Shield, ArrowLeft } from "lucide-react";
+import { toast } from "sonner";
 
 const SettingsPage = () => {
-  const { user, isAuthenticated, updateProfile } = useAuth();
+  const { profile, isAuthenticated, updateProfile } = useAuth();
   const [tab, setTab] = useState<"profile" | "notifications" | "account">("profile");
-  const [name, setName] = useState(user?.name || "");
-  const [bio, setBio] = useState(user?.bio || "");
-  const [location, setLocation] = useState(user?.location || "");
-  const [website, setWebsite] = useState(user?.website || "");
-  const [saved, setSaved] = useState(false);
+  const [name, setName] = useState(profile?.name || "");
+  const [bio, setBio] = useState(profile?.bio || "");
+  const [location, setLocation] = useState(profile?.location || "");
+  const [website, setWebsite] = useState(profile?.website || "");
+  const [saving, setSaving] = useState(false);
+
+  const initials = profile?.name
+    ? profile.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
+    : "U";
 
   if (!isAuthenticated) {
     return (
@@ -27,10 +32,16 @@ const SettingsPage = () => {
     );
   }
 
-  const handleSave = () => {
-    updateProfile({ name, bio, location, website });
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await updateProfile({ name, bio, location, website });
+      toast.success("Profile updated!");
+    } catch {
+      toast.error("Failed to update profile");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const tabs = [
@@ -52,7 +63,6 @@ const SettingsPage = () => {
           <h1 className="text-xl font-bold text-foreground">Settings</h1>
         </div>
 
-        {/* Tabs */}
         <div className="flex gap-2 mb-6">
           {tabs.map((t) => (
             <button key={t.id} onClick={() => setTab(t.id)}
@@ -62,12 +72,12 @@ const SettingsPage = () => {
           ))}
         </div>
 
-        {/* Profile tab */}
         {tab === "profile" && (
           <div className="space-y-6">
             <div className="flex items-center gap-4">
               <Avatar className="h-16 w-16">
-                <AvatarFallback className="bg-primary/10 text-primary text-xl font-bold">{user?.initials}</AvatarFallback>
+                {profile?.avatar_url && <AvatarImage src={profile.avatar_url} />}
+                <AvatarFallback className="bg-primary/10 text-primary text-xl font-bold">{initials}</AvatarFallback>
               </Avatar>
               <div>
                 <Button variant="outline" size="sm" className="rounded-full text-xs">Change avatar</Button>
@@ -98,12 +108,13 @@ const SettingsPage = () => {
             </div>
 
             <div className="flex items-center gap-3">
-              <Button onClick={handleSave} className="rounded-full">{saved ? "✓ Saved!" : "Save changes"}</Button>
+              <Button onClick={handleSave} className="rounded-full" disabled={saving}>
+                {saving ? "Saving..." : "Save changes"}
+              </Button>
             </div>
           </div>
         )}
 
-        {/* Notifications tab */}
         {tab === "notifications" && (
           <div className="space-y-4">
             {["Email notifications for new comments", "Email notifications for new followers", "Weekly digest email", "Push notifications"].map((label) => (
@@ -115,12 +126,11 @@ const SettingsPage = () => {
           </div>
         )}
 
-        {/* Account tab */}
         {tab === "account" && (
           <div className="space-y-6">
             <div>
               <h3 className="text-sm font-semibold text-foreground mb-2">Email</h3>
-              <p className="text-sm text-muted-foreground">{user?.email}</p>
+              <p className="text-sm text-muted-foreground">{profile?.username}@...</p>
             </div>
             <div>
               <h3 className="text-sm font-semibold text-foreground mb-2">Change Password</h3>
