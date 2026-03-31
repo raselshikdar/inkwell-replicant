@@ -1,17 +1,24 @@
-import { feedTabs } from "@/data/mockData";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
 
-const FeedTabs = () => {
-  const [activeTab, setActiveTab] = useState("personalized");
+const tabs = [
+  { id: "latest", label: "Latest" },
+  { id: "featured", label: "Featured" },
+  { id: "top", label: "Top" },
+];
 
+interface FeedTabsProps {
+  activeTab: string;
+  onTabChange: (tab: string) => void;
+}
+
+const FeedTabs = ({ activeTab, onTabChange }: FeedTabsProps) => {
   return (
-    <div className="border-b border-border bg-card">
-      <div className="flex items-center gap-0 overflow-x-auto hn-scrollbar">
-        {feedTabs.map((tab) => (
+    <div className="border-b border-border">
+      <div className="flex items-center gap-0 overflow-x-auto">
+        {tabs.map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => onTabChange(tab.id)}
             className={cn(
               "px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors relative",
               activeTab === tab.id

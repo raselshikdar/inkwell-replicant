@@ -1,71 +1,91 @@
-import { mockArticles, mockDiscussionPosts } from "@/data/mockData";
-import { mockExtendedDiscussions } from "@/data/extendedDiscussions";
+import { useState } from "react";
+import { useArticles, type ArticleWithAuthor } from "@/hooks/useArticles";
 import ArticleCard from "@/components/ArticleCard";
 import WritePrompt from "@/components/WritePrompt";
-import DiscussionPost from "@/components/DiscussionPost";
-import ForumSection from "@/components/ForumSection";
-import BottomDiscussionPost from "@/components/BottomDiscussionPost";
 import AuthorsWorthFollowing from "@/components/AuthorsWorthFollowing";
 import TrendingTagsWeek from "@/components/TrendingTagsWeek";
 import TrendingSeriesSection from "@/components/TrendingSeriesSection";
-import { ArrowDown } from "lucide-react";
+import { ArrowDown, Loader2 } from "lucide-react";
 
-const ArticleFeed = () => {
-  const featuredArticle = mockArticles[0];
-  const gridArticles = mockArticles.slice(1, 5);
+interface ArticleFeedProps {
+  filter?: string;
+}
+
+const ArticleFeed = ({ filter = "latest" }: ArticleFeedProps) => {
+  const [limit, setLimit] = useState(20);
+  const { data: articles = [], isLoading } = useArticles(limit);
+
+  const filteredArticles = (() => {
+    switch (filter) {
+      case "featured":
+        return articles.filter((a) => a.is_featured);
+      case "top":
+        return [...articles].sort((a, b) => b.reaction_count - a.reaction_count);
+      default:
+        return articles;
+    }
+  })();
+
+  const featuredArticle = filteredArticles[0];
+  const gridArticles = filteredArticles.slice(1, 5);
+  const restArticles = filteredArticles.slice(5);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (filteredArticles.length === 0) {
+    return (
+      <div className="text-center py-16">
+        <p className="text-muted-foreground text-sm">No articles yet. Be the first to write!</p>
+      </div>
+    );
+  }
 
   return (
     <div>
-      {/* Featured / hero card */}
-      <ArticleCard article={featuredArticle} variant="featured" />
+      {featuredArticle && (
+        <ArticleCard article={featuredArticle} variant="featured" />
+      )}
 
-      {/* Popular posts — 2x2 grid (4 cards) */}
-      <div className="grid grid-cols-2 gap-3 mt-4">
-        {gridArticles.map((article) => (
-          <ArticleCard key={article.id} article={article} variant="grid" />
-        ))}
-      </div>
+      {gridArticles.length > 0 && (
+        <div className="grid grid-cols-2 gap-3 mt-4">
+          {gridArticles.map((article) => (
+            <ArticleCard key={article.id} article={article} variant="grid" />
+          ))}
+        </div>
+      )}
 
-      {/* Write prompt */}
       <div className="mt-4">
         <WritePrompt />
       </div>
 
-      {/* Discussion posts */}
-      <div className="mt-1">
-        {mockDiscussionPosts.map((post) => (
-          <DiscussionPost key={post.id} post={post} />
-        ))}
-      </div>
+      {restArticles.length > 0 && (
+        <div className="mt-4 space-y-0 border-t border-border">
+          {restArticles.map((article) => (
+            <ArticleCard key={article.id} article={article} variant="list" />
+          ))}
+        </div>
+      )}
 
-      {/* Forum section */}
-      <ForumSection />
-
-      {/* Bottom discussion post (Saikat Das) */}
-      <BottomDiscussionPost />
-
-      {/* Authors worth following */}
       <AuthorsWorthFollowing />
-
-      {/* Trending tags this week */}
       <TrendingTagsWeek />
-
-      {/* Trending series */}
       <TrendingSeriesSection />
 
-      {/* Extended discussion posts */}
-      <div className="mt-2 border-t border-border">
-        {mockExtendedDiscussions.map((post) => (
-          <DiscussionPost key={post.id} post={post} />
-        ))}
-      </div>
-
-      {/* Load more */}
-      <div className="flex justify-center py-6 border-t border-border">
-        <button className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
-          Load more <ArrowDown className="h-4 w-4" />
-        </button>
-      </div>
+      {filteredArticles.length >= limit && (
+        <div className="flex justify-center py-6 border-t border-border">
+          <button
+            onClick={() => setLimit((l) => l + 20)}
+            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Load more <ArrowDown className="h-4 w-4" />
+          </button>
+        </div>
+      )}
     </div>
   );
 };
