@@ -10,10 +10,18 @@ const WritePage = () => {
   const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const contentRef = useRef<HTMLTextAreaElement>(null);
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
-  const [coverImage, setCoverImage] = useState("");
-  const [tags, setTags] = useState<string[]>([]);
+  const [title, setTitle] = useState(() => {
+    try { const d = JSON.parse(localStorage.getItem("draft") || "{}"); return d.title || ""; } catch { return ""; }
+  });
+  const [content, setContent] = useState(() => {
+    try { const d = JSON.parse(localStorage.getItem("draft") || "{}"); return d.content || ""; } catch { return ""; }
+  });
+  const [coverImage, setCoverImage] = useState(() => {
+    try { const d = JSON.parse(localStorage.getItem("draft") || "{}"); return d.coverImage || ""; } catch { return ""; }
+  });
+  const [tags, setTags] = useState<string[]>(() => {
+    try { const d = JSON.parse(localStorage.getItem("draft") || "{}"); return d.tags || []; } catch { return []; }
+  });
   const [tagInput, setTagInput] = useState("");
   const [coverInput, setCoverInput] = useState(false);
   const [coverUrl, setCoverUrl] = useState("");
