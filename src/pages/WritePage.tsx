@@ -95,21 +95,7 @@ const WritePage = () => {
     toast.success("Draft saved locally!");
   };
 
-  // Load draft on mount
-  useState(() => {
-    const draft = localStorage.getItem("draft");
-    if (draft) {
-      try {
-        const { title: t, content: c, coverImage: ci, tags: tg } = JSON.parse(draft);
-        if (t || c) {
-          setTitle(t || "");
-          setContent(c || "");
-          setCoverImage(ci || "");
-          setTags(tg || []);
-        }
-      } catch {}
-    }
-  });
+
 
   return (
     <div className="min-h-screen bg-background">
