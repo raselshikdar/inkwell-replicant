@@ -1,20 +1,40 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import HeaderNav from "@/components/HeaderNav";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
-import { Settings, User, Bell, Shield, ArrowLeft } from "lucide-react";
+import { Settings, User, Shield, ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const SettingsPage = () => {
-  const { profile, isAuthenticated, updateProfile } = useAuth();
-  const [tab, setTab] = useState<"profile" | "notifications" | "account">("profile");
-  const [name, setName] = useState(profile?.name || "");
-  const [bio, setBio] = useState(profile?.bio || "");
-  const [location, setLocation] = useState(profile?.location || "");
-  const [website, setWebsite] = useState(profile?.website || "");
+  const { profile, user, isAuthenticated, updateProfile, logout } = useAuth();
+  const [tab, setTab] = useState<"profile" | "account">("profile");
+  const [name, setName] = useState("");
+  const [bio, setBio] = useState("");
+  const [location, setLocation] = useState("");
+  const [website, setWebsite] = useState("");
+  const [github, setGithub] = useState("");
+  const [twitter, setTwitter] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // Password change
+  const [currentPw, setCurrentPw] = useState("");
+  const [newPw, setNewPw] = useState("");
+  const [showNewPw, setShowNewPw] = useState(false);
+  const [changingPw, setChangingPw] = useState(false);
+
+  useEffect(() => {
+    if (profile) {
+      setName(profile.name || "");
+      setBio(profile.bio || "");
+      setLocation(profile.location || "");
+      setWebsite(profile.website || "");
+      setGithub(profile.github || "");
+      setTwitter(profile.twitter || "");
+    }
+  }, [profile]);
 
   const initials = profile?.name
     ? profile.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
@@ -35,7 +55,7 @@ const SettingsPage = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await updateProfile({ name, bio, location, website });
+      await updateProfile({ name, bio, location, website, github, twitter });
       toast.success("Profile updated!");
     } catch {
       toast.error("Failed to update profile");
@@ -44,9 +64,33 @@ const SettingsPage = () => {
     }
   };
 
+  const handlePasswordChange = async () => {
+    if (newPw.length < 8) {
+      toast.error("Password must be at least 8 characters");
+      return;
+    }
+    setChangingPw(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPw });
+      if (error) throw error;
+      toast.success("Password updated!");
+      setCurrentPw("");
+      setNewPw("");
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to update password");
+    } finally {
+      setChangingPw(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    const confirm = window.confirm("Are you sure you want to delete your account? This action cannot be undone.");
+    if (!confirm) return;
+    toast.error("Account deletion requires admin action. Please contact support.");
+  };
+
   const tabs = [
     { id: "profile" as const, label: "Profile", icon: User },
-    { id: "notifications" as const, label: "Notifications", icon: Bell },
     { id: "account" as const, label: "Account", icon: Shield },
   ];
 
@@ -80,49 +124,34 @@ const SettingsPage = () => {
                 <AvatarFallback className="bg-primary/10 text-primary text-xl font-bold">{initials}</AvatarFallback>
               </Avatar>
               <div>
-                <Button variant="outline" size="sm" className="rounded-full text-xs">Change avatar</Button>
+                <p className="text-sm text-muted-foreground">@{profile?.username}</p>
               </div>
             </div>
 
             <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium text-foreground mb-1.5 block">Name</label>
-                <input type="text" value={name} onChange={(e) => setName(e.target.value)}
-                  className="w-full bg-secondary border border-border rounded-lg px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20" />
-              </div>
+              {[
+                { label: "Name", value: name, onChange: setName, type: "text" },
+                { label: "Location", value: location, onChange: setLocation, type: "text" },
+                { label: "Website", value: website, onChange: setWebsite, type: "url" },
+                { label: "GitHub username", value: github, onChange: setGithub, type: "text" },
+                { label: "Twitter username", value: twitter, onChange: setTwitter, type: "text" },
+              ].map(({ label, value, onChange, type }) => (
+                <div key={label}>
+                  <label className="text-sm font-medium text-foreground mb-1.5 block">{label}</label>
+                  <input type={type} value={value} onChange={(e) => onChange(e.target.value)}
+                    className="w-full bg-secondary border border-border rounded-lg px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                </div>
+              ))}
               <div>
                 <label className="text-sm font-medium text-foreground mb-1.5 block">Bio</label>
                 <textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={3}
                   className="w-full bg-secondary border border-border rounded-lg px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none" />
               </div>
-              <div>
-                <label className="text-sm font-medium text-foreground mb-1.5 block">Location</label>
-                <input type="text" value={location} onChange={(e) => setLocation(e.target.value)}
-                  className="w-full bg-secondary border border-border rounded-lg px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20" />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-foreground mb-1.5 block">Website</label>
-                <input type="url" value={website} onChange={(e) => setWebsite(e.target.value)}
-                  className="w-full bg-secondary border border-border rounded-lg px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20" />
-              </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <Button onClick={handleSave} className="rounded-full" disabled={saving}>
-                {saving ? "Saving..." : "Save changes"}
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {tab === "notifications" && (
-          <div className="space-y-4">
-            {["Email notifications for new comments", "Email notifications for new followers", "Weekly digest email", "Push notifications"].map((label) => (
-              <label key={label} className="flex items-center justify-between py-3 border-b border-border">
-                <span className="text-sm text-foreground">{label}</span>
-                <input type="checkbox" defaultChecked className="w-4 h-4 rounded border-border text-primary focus:ring-primary" />
-              </label>
-            ))}
+            <Button onClick={handleSave} className="rounded-full" disabled={saving}>
+              {saving ? "Saving..." : "Save changes"}
+            </Button>
           </div>
         )}
 
@@ -130,15 +159,38 @@ const SettingsPage = () => {
           <div className="space-y-6">
             <div>
               <h3 className="text-sm font-semibold text-foreground mb-2">Email</h3>
-              <p className="text-sm text-muted-foreground">{profile?.username}@...</p>
+              <p className="text-sm text-muted-foreground">{user?.email}</p>
             </div>
+
             <div>
-              <h3 className="text-sm font-semibold text-foreground mb-2">Change Password</h3>
-              <Button variant="outline" size="sm" className="rounded-full text-xs">Update password</Button>
+              <h3 className="text-sm font-semibold text-foreground mb-3">Change Password</h3>
+              <div className="space-y-3 max-w-[400px]">
+                <div className="relative">
+                  <input type={showNewPw ? "text" : "password"} value={newPw} onChange={(e) => setNewPw(e.target.value)} placeholder="New password (min 8 chars)"
+                    className="w-full bg-secondary border border-border rounded-lg px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 pr-10" />
+                  <button type="button" onClick={() => setShowNewPw(!showNewPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                    {showNewPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                <Button variant="outline" size="sm" className="rounded-full" onClick={handlePasswordChange} disabled={changingPw || newPw.length < 8}>
+                  {changingPw ? "Updating..." : "Update password"}
+                </Button>
+              </div>
             </div>
+
+            <div>
+              <h3 className="text-sm font-semibold text-foreground mb-3">Sign out</h3>
+              <Button variant="outline" size="sm" className="rounded-full" onClick={async () => { await logout(); toast.success("Signed out"); }}>
+                Sign out
+              </Button>
+            </div>
+
             <div className="border-t border-border pt-6">
               <h3 className="text-sm font-semibold text-destructive mb-2">Danger Zone</h3>
-              <Button variant="destructive" size="sm" className="rounded-full text-xs">Delete account</Button>
+              <p className="text-xs text-muted-foreground mb-3">Permanently delete your account and all associated data.</p>
+              <Button variant="destructive" size="sm" className="rounded-full text-xs" onClick={handleDeleteAccount}>
+                Delete account
+              </Button>
             </div>
           </div>
         )}

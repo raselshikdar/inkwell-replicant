@@ -2,15 +2,16 @@ import { useParams, Link } from "react-router-dom";
 import HeaderNav from "@/components/HeaderNav";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { MessageCircle, Bookmark, Share2, ArrowLeft, Heart, Loader2 } from "lucide-react";
+import { MessageCircle, Bookmark, Share2, ArrowLeft, Heart, Loader2, Check, Copy } from "lucide-react";
 import { useArticleBySlug } from "@/hooks/useArticles";
 import { useComments, useAddComment } from "@/hooks/useComments";
 import { useReactions, useToggleReaction } from "@/hooks/useReactions";
 import { useBookmarks } from "@/contexts/BookmarkContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatDate } from "@/lib/timeAgo";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const ArticlePage = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -18,11 +19,26 @@ const ArticlePage = () => {
   const { user, isAuthenticated, profile } = useAuth();
   const { isBookmarked, toggleBookmark } = useBookmarks();
   const [commentText, setCommentText] = useState("");
+  const [following, setFollowing] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const { data: comments = [] } = useComments(article?.id || "");
   const { data: reactionData } = useReactions(article?.id || "", user?.id);
   const toggleReaction = useToggleReaction();
   const addComment = useAddComment();
+
+  // Check follow status
+  useEffect(() => {
+    if (!user || !article) return;
+    if (user.id === article.author_id) return;
+    supabase
+      .from("follows")
+      .select("id")
+      .eq("follower_id", user.id)
+      .eq("following_id", article.author_id)
+      .maybeSingle()
+      .then(({ data }) => setFollowing(!!data));
+  }, [user, article]);
 
   if (isLoading) {
     return (
@@ -61,6 +77,35 @@ const ArticlePage = () => {
       userId: user.id,
       hasReacted: reactionData?.userReacted || false,
     });
+  };
+
+  const handleFollow = async () => {
+    if (!user) { toast.error("Sign in to follow"); return; }
+    try {
+      if (following) {
+        await supabase.from("follows").delete().eq("follower_id", user.id).eq("following_id", article.author_id);
+        setFollowing(false);
+        toast.success("Unfollowed");
+      } else {
+        await supabase.from("follows").insert({ follower_id: user.id, following_id: article.author_id });
+        setFollowing(true);
+        toast.success("Following!");
+      }
+    } catch {
+      toast.error("Failed");
+    }
+  };
+
+  const handleShare = async () => {
+    const url = window.location.href;
+    if (navigator.share) {
+      try { await navigator.share({ title: article.title, url }); } catch {}
+    } else {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      toast.success("Link copied!");
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   const handleComment = async () => {
@@ -111,7 +156,14 @@ const ArticlePage = () => {
           </div>
           <div className="flex-1" />
           {isAuthenticated && user?.id !== article.author_id && (
-            <Button variant="outline" size="sm" className="rounded-full text-xs">Follow</Button>
+            <Button
+              variant={following ? "secondary" : "outline"}
+              size="sm"
+              className="rounded-full text-xs"
+              onClick={handleFollow}
+            >
+              {following ? "Following" : "Follow"}
+            </Button>
           )}
         </div>
 
@@ -157,14 +209,14 @@ const ArticlePage = () => {
               <Bookmark className={`h-5 w-5 ${bookmarked ? "fill-primary" : ""}`} />
             </button>
           )}
-          <button className="p-2 rounded-full text-muted-foreground hover:bg-muted transition-colors">
-            <Share2 className="h-5 w-5" />
+          <button onClick={handleShare} className="p-2 rounded-full text-muted-foreground hover:bg-muted transition-colors">
+            {copied ? <Check className="h-5 w-5 text-primary" /> : <Share2 className="h-5 w-5" />}
           </button>
         </div>
 
         <div className="border-t border-border pt-6">
           <h3 className="text-lg font-bold text-foreground mb-4">Comments ({comments.length})</h3>
-          {isAuthenticated && (
+          {isAuthenticated ? (
             <div className="flex gap-3 mb-6">
               <Avatar className="h-8 w-8">
                 {profile?.avatar_url && <AvatarImage src={profile.avatar_url} />}
@@ -180,6 +232,10 @@ const ArticlePage = () => {
                 </div>
               </div>
             </div>
+          ) : (
+            <p className="text-sm text-muted-foreground mb-6">
+              <Link to="/login" className="text-primary hover:underline">Sign in</Link> to leave a comment.
+            </p>
           )}
 
           {comments.length === 0 ? (

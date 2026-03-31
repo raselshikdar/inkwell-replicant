@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Image, X, Bold, Italic, Code, List, Link2, Heading } from "lucide-react";
@@ -9,11 +9,22 @@ import { toast } from "sonner";
 const WritePage = () => {
   const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
-  const [coverImage, setCoverImage] = useState("");
-  const [tags, setTags] = useState<string[]>([]);
+  const contentRef = useRef<HTMLTextAreaElement>(null);
+  const [title, setTitle] = useState(() => {
+    try { const d = JSON.parse(localStorage.getItem("draft") || "{}"); return d.title || ""; } catch { return ""; }
+  });
+  const [content, setContent] = useState(() => {
+    try { const d = JSON.parse(localStorage.getItem("draft") || "{}"); return d.content || ""; } catch { return ""; }
+  });
+  const [coverImage, setCoverImage] = useState(() => {
+    try { const d = JSON.parse(localStorage.getItem("draft") || "{}"); return d.coverImage || ""; } catch { return ""; }
+  });
+  const [tags, setTags] = useState<string[]>(() => {
+    try { const d = JSON.parse(localStorage.getItem("draft") || "{}"); return d.tags || []; } catch { return []; }
+  });
   const [tagInput, setTagInput] = useState("");
+  const [coverInput, setCoverInput] = useState(false);
+  const [coverUrl, setCoverUrl] = useState("");
   const publishMutation = usePublishArticle();
 
   if (!isAuthenticated) {
@@ -27,6 +38,31 @@ const WritePage = () => {
       </div>
     );
   }
+
+  const insertMarkdown = (prefix: string, suffix: string = "") => {
+    const textarea = contentRef.current;
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selected = content.substring(start, end);
+    const replacement = `${prefix}${selected || "text"}${suffix}`;
+    const newContent = content.substring(0, start) + replacement + content.substring(end);
+    setContent(newContent);
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + prefix.length, start + prefix.length + (selected || "text").length);
+    }, 0);
+  };
+
+  const toolbarActions = [
+    { icon: Heading, action: () => insertMarkdown("## ", "\n"), label: "Heading" },
+    { icon: Bold, action: () => insertMarkdown("**", "**"), label: "Bold" },
+    { icon: Italic, action: () => insertMarkdown("*", "*"), label: "Italic" },
+    { icon: Code, action: () => insertMarkdown("`", "`"), label: "Code" },
+    { icon: List, action: () => insertMarkdown("- ", "\n"), label: "List" },
+    { icon: Link2, action: () => insertMarkdown("[", "](url)"), label: "Link" },
+    { icon: Image, action: () => insertMarkdown("![alt](", ")"), label: "Image" },
+  ];
 
   const addTag = () => {
     const t = tagInput.trim();
@@ -54,6 +90,13 @@ const WritePage = () => {
     }
   };
 
+  const handleSaveDraft = () => {
+    localStorage.setItem("draft", JSON.stringify({ title, content, coverImage, tags }));
+    toast.success("Draft saved locally!");
+  };
+
+
+
   return (
     <div className="min-h-screen bg-background">
       <div className="sticky top-0 z-50 bg-card border-b border-border">
@@ -62,7 +105,7 @@ const WritePage = () => {
             <ArrowLeft className="h-4 w-4" /> Back
           </Link>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="rounded-full text-xs">Save draft</Button>
+            <Button variant="outline" size="sm" className="rounded-full text-xs" onClick={handleSaveDraft}>Save draft</Button>
             <Button size="sm" className="rounded-full text-xs" onClick={handlePublish} disabled={!title.trim() || publishMutation.isPending}>
               {publishMutation.isPending ? "Publishing..." : "Publish"}
             </Button>
@@ -78,9 +121,24 @@ const WritePage = () => {
               <X className="h-4 w-4" />
             </button>
           </div>
+        ) : coverInput ? (
+          <div className="flex items-center gap-2 mb-6">
+            <input
+              type="url" value={coverUrl} onChange={(e) => setCoverUrl(e.target.value)}
+              placeholder="Paste image URL..."
+              className="flex-1 bg-secondary border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+              autoFocus
+            />
+            <Button size="sm" variant="outline" className="rounded-full text-xs" onClick={() => { if (coverUrl.trim()) { setCoverImage(coverUrl.trim()); setCoverInput(false); setCoverUrl(""); } }}>
+              Add
+            </Button>
+            <Button size="sm" variant="ghost" className="rounded-full text-xs" onClick={() => { setCoverInput(false); setCoverUrl(""); }}>
+              Cancel
+            </Button>
+          </div>
         ) : (
           <button
-            onClick={() => setCoverImage("https://images.unsplash.com/photo-1518432031352-d6fc5c10da5a?w=800&h=400&fit=crop")}
+            onClick={() => setCoverInput(true)}
             className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6 border border-dashed border-border rounded-lg px-4 py-8 w-full justify-center transition-colors"
           >
             <Image className="h-5 w-5" /> Add cover image
@@ -105,14 +163,14 @@ const WritePage = () => {
         </div>
 
         <div className="flex items-center gap-1 border border-border rounded-lg px-2 py-1.5 mb-4 bg-card">
-          {[Heading, Bold, Italic, Code, List, Link2, Image].map((Icon, i) => (
-            <button key={i} className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors">
+          {toolbarActions.map(({ icon: Icon, action, label }) => (
+            <button key={label} onClick={action} title={label} className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors">
               <Icon className="h-4 w-4" />
             </button>
           ))}
         </div>
 
-        <textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder="Tell your story... (Markdown supported)"
+        <textarea ref={contentRef} value={content} onChange={(e) => setContent(e.target.value)} placeholder="Tell your story... (Markdown supported)"
           className="w-full min-h-[400px] text-sm text-foreground placeholder:text-muted-foreground/50 bg-transparent border-none outline-none resize-none leading-relaxed" />
       </div>
     </div>

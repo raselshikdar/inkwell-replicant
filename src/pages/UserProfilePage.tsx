@@ -2,12 +2,12 @@ import { useParams, Link } from "react-router-dom";
 import HeaderNav from "@/components/HeaderNav";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { MapPin, Link2, Github, Calendar, Loader2 } from "lucide-react";
+import { MapPin, Link2, Github, Calendar, Loader2, Twitter } from "lucide-react";
 import { useProfileByUsername, useFollowCounts } from "@/hooks/useProfile";
 import { useUserArticles } from "@/hooks/useArticles";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatDate } from "@/lib/timeAgo";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -19,6 +19,19 @@ const UserProfilePage = () => {
   const { user } = useAuth();
   const [tab, setTab] = useState<"posts" | "about">("posts");
   const [following, setFollowing] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
+
+  // Init follow state from DB
+  useEffect(() => {
+    if (!user || !profileData || user.id === profileData.id) return;
+    supabase
+      .from("follows")
+      .select("id")
+      .eq("follower_id", user.id)
+      .eq("following_id", profileData.id)
+      .maybeSingle()
+      .then(({ data }) => setFollowing(!!data));
+  }, [user, profileData]);
 
   if (isLoading) {
     return (
@@ -47,16 +60,21 @@ const UserProfilePage = () => {
 
   const handleFollow = async () => {
     if (!user) { toast.error("Sign in to follow"); return; }
+    setFollowLoading(true);
     try {
       if (following) {
         await supabase.from("follows").delete().eq("follower_id", user.id).eq("following_id", profileData.id);
         setFollowing(false);
+        toast.success("Unfollowed");
       } else {
         await supabase.from("follows").insert({ follower_id: user.id, following_id: profileData.id });
         setFollowing(true);
+        toast.success("Following!");
       }
     } catch {
       toast.error("Failed");
+    } finally {
+      setFollowLoading(false);
     }
   };
 
@@ -78,8 +96,9 @@ const UserProfilePage = () => {
             <div className="flex flex-wrap items-center gap-3 mt-3 text-xs text-muted-foreground">
               {profileData.location && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{profileData.location}</span>}
               <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />Joined {formatDate(profileData.created_at)}</span>
-              {profileData.website && <a href={profileData.website} className="flex items-center gap-1 text-primary hover:underline"><Link2 className="h-3 w-3" />{profileData.website}</a>}
-              {profileData.github && <a href={`https://github.com/${profileData.github}`} className="flex items-center gap-1 hover:text-foreground"><Github className="h-3 w-3" />{profileData.github}</a>}
+              {profileData.website && <a href={profileData.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-primary hover:underline"><Link2 className="h-3 w-3" />{profileData.website}</a>}
+              {profileData.github && <a href={`https://github.com/${profileData.github}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-foreground"><Github className="h-3 w-3" />{profileData.github}</a>}
+              {profileData.twitter && <a href={`https://twitter.com/${profileData.twitter}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-foreground"><Twitter className="h-3 w-3" />{profileData.twitter}</a>}
             </div>
             <div className="flex items-center gap-4 mt-3 text-sm">
               <span><strong className="text-foreground">{followCounts?.followers || 0}</strong> <span className="text-muted-foreground">followers</span></span>
@@ -88,20 +107,25 @@ const UserProfilePage = () => {
           </div>
         </div>
 
-        {!isOwnProfile && (
-          <div className="flex gap-4 mb-4">
-            <Button variant={following ? "secondary" : "outline"} size="sm" className="rounded-full" onClick={handleFollow}>
-              {following ? "Following" : "Follow"}
+        <div className="flex gap-2 mb-6">
+          {!isOwnProfile && (
+            <Button variant={following ? "secondary" : "default"} size="sm" className="rounded-full" onClick={handleFollow} disabled={followLoading}>
+              {followLoading ? "..." : following ? "Following" : "Follow"}
             </Button>
-          </div>
-        )}
+          )}
+          {isOwnProfile && (
+            <Link to="/settings">
+              <Button variant="outline" size="sm" className="rounded-full">Edit profile</Button>
+            </Link>
+          )}
+        </div>
 
         <div className="border-b border-border mb-6">
           <div className="flex gap-0">
             {(["posts", "about"] as const).map((t) => (
               <button key={t} onClick={() => setTab(t)}
                 className={`px-4 py-3 text-sm font-medium capitalize relative transition-colors ${tab === t ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}>
-                {t}
+                {t} {t === "posts" && `(${userArticles.length})`}
                 {tab === t && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full" />}
               </button>
             ))}
@@ -114,7 +138,12 @@ const UserProfilePage = () => {
               {userArticles.map((article) => (
                 <Link key={article.id} to={`/article/${article.slug}`} className="block py-3 border-b border-border hover:bg-muted/50 rounded-lg px-2 transition-colors">
                   <h3 className="text-sm font-bold text-foreground">{article.title}</h3>
-                  <p className="text-xs text-muted-foreground mt-1">{article.brief}</p>
+                  <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{article.brief}</p>
+                  <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                    <span>{formatDate(article.created_at)}</span>
+                    <span>❤️ {article.reaction_count}</span>
+                    <span>💬 {article.response_count}</span>
+                  </div>
                 </Link>
               ))}
             </div>
@@ -127,12 +156,13 @@ const UserProfilePage = () => {
               <h3 className="text-sm font-semibold text-foreground mb-2">About</h3>
               <p className="text-sm text-muted-foreground">{profileData.bio || "No bio yet."}</p>
             </div>
-            {(profileData.website || profileData.github) && (
+            {(profileData.website || profileData.github || profileData.twitter) && (
               <div>
                 <h3 className="text-sm font-semibold text-foreground mb-2">Links</h3>
                 <div className="space-y-2">
-                  {profileData.website && <a href={profileData.website} className="flex items-center gap-2 text-sm text-primary hover:underline"><Link2 className="h-4 w-4" />{profileData.website}</a>}
-                  {profileData.github && <a href={`https://github.com/${profileData.github}`} className="flex items-center gap-2 text-sm text-primary hover:underline"><Github className="h-4 w-4" />github.com/{profileData.github}</a>}
+                  {profileData.website && <a href={profileData.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-primary hover:underline"><Link2 className="h-4 w-4" />{profileData.website}</a>}
+                  {profileData.github && <a href={`https://github.com/${profileData.github}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-primary hover:underline"><Github className="h-4 w-4" />github.com/{profileData.github}</a>}
+                  {profileData.twitter && <a href={`https://twitter.com/${profileData.twitter}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-primary hover:underline"><Twitter className="h-4 w-4" />@{profileData.twitter}</a>}
                 </div>
               </div>
             )}
